@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseDesk</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #1a1a2e; }
+        h2 { color: #16213e; margin-top: 40px; }
+        textarea { width: 100%; height: 100px; padding: 10px; font-size: 14px; box-sizing: border-box; }
+        button { margin-top: 10px; padding: 10px 20px; background: #0f3460; color: white; border: none; cursor: pointer; font-size: 14px; }
+        button:hover { background: #16213e; }
+        .ticket { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .ticket h3 { margin: 0 0 10px 0; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 12px; margin-right: 5px; color: white; }
+        .high { background: #e74c3c; }
+        .medium { background: #f39c12; }
+        .low { background: #27ae60; }
+        .bug { background: #8e44ad; }
+        .feature { background: #2980b9; }
+        .billing { background: #e67e22; }
+        .account { background: #16a085; }
+        .other { background: #7f8c8d; }
+        #message { margin-top: 10px; color: green; }
+    </style>
+</head>
+<body>
+<h1>PulseDesk</h1>
+
+<h2>Submit a Comment</h2>
+<textarea id="commentText" placeholder="Enter your comment here..."></textarea>
+<br>
+<button onclick="submitComment()">Submit</button>
+<p id="message"></p>
+
+<h2>Tickets</h2>
+<button onclick="loadTickets()">Refresh Tickets</button>
+<div id="tickets"></div>
+
+<script>
+    async function submitComment() {
+        const text = document.getElementById('commentText').value;
+        if (!text.trim()) return;
+
+        document.getElementById('message').textContent = 'Analyzing comment...';
+
+        const response = await fetch('/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+
+        if (response.ok) {
+            document.getElementById('message').textContent = 'Comment submitted successfully!';
+            document.getElementById('commentText').value = '';
+            loadTickets();
+        } else {
+            document.getElementById('message').textContent = 'Error submitting comment.';
+        }
+    }
+
+    async function loadTickets() {
+        const response = await fetch('/tickets');
+        const tickets = await response.json();
+        const container = document.getElementById('tickets');
+
+        if (tickets.length === 0) {
+            container.innerHTML = '<p>No tickets yet.</p>';
+            return;
+        }
+
+        container.innerHTML = tickets.map(ticket => `
+            <div class="ticket">
+                <h3>${ticket.title}</h3>
+                <span class="badge ${ticket.priority}">${ticket.priority}</span>
+                <span class="badge ${ticket.category}">${ticket.category}</span>
+                <p>${ticket.summary}</p>
+            </div>
+        `).join('');
+    }
+
+    loadTickets();
+</script>
+</body>
+</html>
