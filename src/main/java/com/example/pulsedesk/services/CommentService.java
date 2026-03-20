@@ -28,21 +28,48 @@ public class CommentService {
         commentRepository.save(comment);
 
         // 2. Classify if it needs a ticket
-        List<Map<String, Object>> ticketCheck = huggingFaceService.classify(text,
-                List.of("support ticket", "compliment"));
+        List<Map<String, Object>> relevanceCheck = huggingFaceService.classify(text,
+                List.of("real user feedback about a software product or service", "nonsense, gibberish, or unrelated to software"));
+        String relevanceLabel = (String) relevanceCheck.get(0).get("label");
+
+        if (relevanceLabel.equals("nonsense, gibberish, or unrelated to software")) {
+            return comment;
+        }
+        List<Map<String, Object>> ticketCheck = huggingFaceService.classify(text, List.of("problem or complaint", "compliment or praise"));
+        if (ticketCheck == null) return comment;
 
         String topLabel = (String) ticketCheck.get(0).get("label");
+        topLabel = topLabel.replace("problem or complaint", "support ticket").replace("compliment or praise", "compliment");
 
         if (topLabel.equals("support ticket")) {
 
+// Category - make bug more distinct, reduce account bias
             List<Map<String, Object>> categoryResult = huggingFaceService.classify(text,
-                    List.of("bug", "feature", "billing", "account", "other"));
+                    List.of("software or button not working as expected", "payment or invoice issue", "new feature or improvement request", "problem specific to my account such as being locked or banned", "other"));
             String category = (String) categoryResult.get(0).get("label");
+            category = category
+                    .replace("software or button not working as expected", "bug")
+                    .replace("payment or invoice issue", "billing")
+                    .replace("new feature or improvement request", "feature")
+                    .replace("problem specific to my account such as being locked or banned", "account")
+                    .replace("other", "other");
 
-            List<Map<String, Object>> priorityResult = huggingFaceService.classify(text,
-                    List.of("high", "medium", "low"));
-            String priority = (String) priorityResult.get(0).get("label");
+// Priority - make low more appealing to the model
+            // Step 1: is it critical or not?
+                    List<Map<String, Object>> criticalCheck = huggingFaceService.classify(text,
+                    List.of("critical system failure or data loss", "minor or moderate issue"));
+            String criticalLabel = (String) criticalCheck.get(0).get("label");
 
+            String priority;
+            if (criticalLabel.equals("critical system failure or data loss")) {
+                priority = "high";
+            } else {
+                // Step 2: is it functional or purely cosmetic?
+                List<Map<String, Object>> cosmeticCheck = huggingFaceService.classify(text,
+                        List.of("something is not working or broken", "visual or cosmetic issue like font color or spelling"));
+                String cosmeticLabel = (String) cosmeticCheck.get(0).get("label");
+                priority = cosmeticLabel.equals("visual or cosmetic issue like font color or spelling") ? "low" : "medium";
+            }
             String title = text.length() > 60 ? text.substring(0, 60) + "..." : text;
             String summary = text.length() > 150 ? text.substring(0, 150) + "..." : text;
 
