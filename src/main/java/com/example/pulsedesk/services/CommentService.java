@@ -33,9 +33,13 @@ public class CommentService {
                         "nonsense, gibberish, or unrelated to software"));
         if(relevanceCheck == null) return comment;
         String relevanceLabel = (String) relevanceCheck.get(0).get("label");
+        double relevanceScore = (double) relevanceCheck.get(0).get("score");
 
-        if (relevanceLabel.equals("nonsense, gibberish, or unrelated to software")) {
+        if (relevanceLabel.equals("nonsense, gibberish, or unrelated to software") && relevanceScore >= 0.75) {
             return comment;
+        }
+        else{
+            relevanceLabel = "real user feedback about a software product or service";
         }
         List<Map<String, Object>> ticketCheck = huggingFaceService.classify(text, List.of("problem or complaint",
                 "compliment or praise"));
@@ -51,7 +55,7 @@ public class CommentService {
                     List.of("software or button not working as expected",
                             "payment or invoice issue",
                             "new feature or improvement request",
-                            "problem specific to my account such as being locked or banned",
+                            "problem to my specific account, such as being locked, banned, or losing profile data",
                             "other"));
             if(categoryResult == null) return comment;
             String category = (String) categoryResult.get(0).get("label");
@@ -59,7 +63,7 @@ public class CommentService {
                     .replace("software or button not working as expected", "bug")
                     .replace("payment or invoice issue", "billing")
                     .replace("new feature or improvement request", "feature")
-                    .replace("problem specific to my account such as being locked or banned", "account")
+                    .replace("problem to my specific account, such as being locked, banned, or losing profile data", "account")
                     .replace("other", "other");
             //is it critical or not?
             List<Map<String, Object>> criticalCheck = huggingFaceService.classify(text,

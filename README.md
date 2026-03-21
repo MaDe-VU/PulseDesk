@@ -31,6 +31,7 @@ The originally suggested models (`google/flan-t5-base`, `mistralai/Mistral-7B-In
 - Title and summary are derived programmatically from the comment text rather than AI-generated, as `bart-large-mnli` is a classification model and does not generate free-form text
 - Priority classification is approximate for edge cases - ambiguous comments may receive a slightly higher priority than expected. This is an intentional tradeoff: false negatives (missing real issues) are considered more harmful than false positives
 - The free Hugging Face tier models occasionally go cold and may take some time. If the API is unavailable, the comment is saved but no ticket is created
+- The relevance filter performs better on longer, more descriptive comments. Very short comments may occasionally be misclassified as irrelevant and not generate a ticket.
 
 ---
 
@@ -44,6 +45,9 @@ The originally suggested models (`google/flan-t5-base`, `mistralai/Mistral-7B-In
 
 ---
 
+## Deployment
+The application is deployed on Railway and accessible at:
+[https://pulsedesk-production.up.railway.app/](https://pulsedesk-production.up.railway.app/)
 ## Prerequisites
 
 - Java 21 or higher installed
