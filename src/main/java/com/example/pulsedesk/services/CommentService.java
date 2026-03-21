@@ -23,29 +23,37 @@ public class CommentService {
     private HuggingFaceService huggingFaceService;
 
     public Comment processComment(String text) {
-        // 1. Save the comment
+        //Save the comment
         Comment comment = new Comment(text);
         commentRepository.save(comment);
 
-        // 2. Classify if it needs a ticket
+        //Classify if it needs a ticket
         List<Map<String, Object>> relevanceCheck = huggingFaceService.classify(text,
-                List.of("real user feedback about a software product or service", "nonsense, gibberish, or unrelated to software"));
+                List.of("real user feedback about a software product or service",
+                        "nonsense, gibberish, or unrelated to software"));
+        if(relevanceCheck == null) return comment;
         String relevanceLabel = (String) relevanceCheck.get(0).get("label");
 
         if (relevanceLabel.equals("nonsense, gibberish, or unrelated to software")) {
             return comment;
         }
-        List<Map<String, Object>> ticketCheck = huggingFaceService.classify(text, List.of("problem or complaint", "compliment or praise"));
+        List<Map<String, Object>> ticketCheck = huggingFaceService.classify(text, List.of("problem or complaint",
+                "compliment or praise"));
         if (ticketCheck == null) return comment;
 
         String topLabel = (String) ticketCheck.get(0).get("label");
-        topLabel = topLabel.replace("problem or complaint", "support ticket").replace("compliment or praise", "compliment");
+        topLabel = topLabel
+                .replace("problem or complaint", "support ticket")
+                .replace("compliment or praise", "compliment");
 
         if (topLabel.equals("support ticket")) {
-
-// Category - make bug more distinct, reduce account bias
             List<Map<String, Object>> categoryResult = huggingFaceService.classify(text,
-                    List.of("software or button not working as expected", "payment or invoice issue", "new feature or improvement request", "problem specific to my account such as being locked or banned", "other"));
+                    List.of("software or button not working as expected",
+                            "payment or invoice issue",
+                            "new feature or improvement request",
+                            "problem specific to my account such as being locked or banned",
+                            "other"));
+            if(categoryResult == null) return comment;
             String category = (String) categoryResult.get(0).get("label");
             category = category
                     .replace("software or button not working as expected", "bug")
@@ -53,24 +61,25 @@ public class CommentService {
                     .replace("new feature or improvement request", "feature")
                     .replace("problem specific to my account such as being locked or banned", "account")
                     .replace("other", "other");
-
-// Priority - make low more appealing to the model
-            // Step 1: is it critical or not?
-                    List<Map<String, Object>> criticalCheck = huggingFaceService.classify(text,
+            //is it critical or not?
+            List<Map<String, Object>> criticalCheck = huggingFaceService.classify(text,
                     List.of("critical system failure or data loss", "minor or moderate issue"));
+            if(criticalCheck == null) return comment;
             String criticalLabel = (String) criticalCheck.get(0).get("label");
 
             String priority;
             if (criticalLabel.equals("critical system failure or data loss")) {
                 priority = "high";
             } else {
-                // Step 2: is it functional or purely cosmetic?
+                //is it functional or purely cosmetic?
                 List<Map<String, Object>> cosmeticCheck = huggingFaceService.classify(text,
-                        List.of("something is not working or broken", "visual or cosmetic issue like font color or spelling"));
+                        List.of("something is not working or broken",
+                                "visual or cosmetic issue like font color or spelling"));
                 String cosmeticLabel = (String) cosmeticCheck.get(0).get("label");
                 priority = cosmeticLabel.equals("visual or cosmetic issue like font color or spelling") ? "low" : "medium";
             }
-            String title = text.length() > 60 ? text.substring(0, 60) + "..." : text;
+            String titleText = text.length() > 50 ? text.substring(0, 50) + "..." : text;
+            String title = "[" + category.toUpperCase() + "][" + priority.toUpperCase() + "] " + titleText;
             String summary = text.length() > 150 ? text.substring(0, 150) + "..." : text;
 
             Ticket ticket = new Ticket(title, category, priority, summary, comment);
