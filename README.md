@@ -36,7 +36,7 @@ The originally suggested models (`google/flan-t5-base`, `mistralai/Mistral-7B-In
 
 ## Tech Stack
 
-- Java 25
+- Java 21
 - Spring Boot 4
 - Spring Data JPA
 - H2 in-memory database
